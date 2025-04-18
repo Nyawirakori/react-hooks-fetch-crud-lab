@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 function QuestionForm({ onAddQuestion, setPage }) {
   const [formData, setFormData] = useState({
@@ -9,6 +9,7 @@ function QuestionForm({ onAddQuestion, setPage }) {
     answer4: "",
     correctIndex: 0,
   });
+  const [loading, setLoading] = useState(false); // To track if the fetch request is in progress
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -29,6 +30,7 @@ function QuestionForm({ onAddQuestion, setPage }) {
       correctIndex,
     };
 
+    setLoading(true); // Set loading to true when the request starts
     fetch("http://localhost:4000/questions", {
       method: "POST",
       headers: {
@@ -38,6 +40,7 @@ function QuestionForm({ onAddQuestion, setPage }) {
     })
       .then((res) => res.json())
       .then((data) => {
+        if (!isMountedRef.current) return; // Check if the component is still mounted
         onAddQuestion(data);
         setFormData({
           prompt: "",
@@ -53,8 +56,25 @@ function QuestionForm({ onAddQuestion, setPage }) {
           setPage("List");
         }
       })
-      .catch((err) => console.error("Error adding question:", err));
+      .catch((err) => {
+        if (!isMountedRef.current) return; // Check if the component is still mounted
+        console.error("Error adding question:", err);
+      })
+      .finally(() => {
+        if (!isMountedRef.current) return; // Check if the component is still mounted
+        setLoading(false); // Set loading to false when the request finishes
+      });
   }
+
+  // Use a useRef to track the mounted state of the component
+  const isMountedRef = React.useRef(true);
+
+  useEffect(() => {
+    // This cleanup function will run when the component unmounts
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []); // Empty dependency array ensures this runs only once on unmount
 
   return (
     <section>
@@ -67,6 +87,7 @@ function QuestionForm({ onAddQuestion, setPage }) {
             name="prompt"
             value={formData.prompt}
             onChange={handleChange}
+            disabled={loading} // Disable input while loading
           />
         </label>
         <label>
@@ -76,6 +97,7 @@ function QuestionForm({ onAddQuestion, setPage }) {
             name="answer1"
             value={formData.answer1}
             onChange={handleChange}
+            disabled={loading}
           />
         </label>
         <label>
@@ -85,6 +107,7 @@ function QuestionForm({ onAddQuestion, setPage }) {
             name="answer2"
             value={formData.answer2}
             onChange={handleChange}
+            disabled={loading}
           />
         </label>
         <label>
@@ -94,6 +117,7 @@ function QuestionForm({ onAddQuestion, setPage }) {
             name="answer3"
             value={formData.answer3}
             onChange={handleChange}
+            disabled={loading}
           />
         </label>
         <label>
@@ -103,6 +127,7 @@ function QuestionForm({ onAddQuestion, setPage }) {
             name="answer4"
             value={formData.answer4}
             onChange={handleChange}
+            disabled={loading}
           />
         </label>
         <label>
@@ -111,6 +136,7 @@ function QuestionForm({ onAddQuestion, setPage }) {
             name="correctIndex"
             value={formData.correctIndex}
             onChange={handleChange}
+            disabled={loading}
           >
             <option value="0">{formData.answer1}</option>
             <option value="1">{formData.answer2}</option>
@@ -118,7 +144,9 @@ function QuestionForm({ onAddQuestion, setPage }) {
             <option value="3">{formData.answer4}</option>
           </select>
         </label>
-        <button type="submit">Add Question</button>
+        <button type="submit" disabled={loading}>
+          {loading ? "Adding..." : "Add Question"}
+        </button>
       </form>
     </section>
   );
