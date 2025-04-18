@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-function QuestionForm(props) {
+function QuestionForm({ onAddQuestion, setPage }) {
   const [formData, setFormData] = useState({
     prompt: "",
     answer1: "",
@@ -11,15 +11,49 @@ function QuestionForm(props) {
   });
 
   function handleChange(event) {
-    setFormData({
-      ...formData,
-      [event.target.name]: event.target.value,
-    });
+    const { name, value } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "correctIndex" ? parseInt(value) : value,
+    }));
   }
 
   function handleSubmit(event) {
     event.preventDefault();
-    console.log(formData);
+    const { prompt, answer1, answer2, answer3, answer4, correctIndex } =
+      formData;
+
+    const newQuestion = {
+      prompt,
+      answers: [answer1, answer2, answer3, answer4],
+      correctIndex,
+    };
+
+    fetch("http://localhost:4000/questions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newQuestion),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        onAddQuestion(data);
+        setFormData({
+          prompt: "",
+          answer1: "",
+          answer2: "",
+          answer3: "",
+          answer4: "",
+          correctIndex: 0,
+        });
+
+        // Navigate back to "View Questions" tab after adding
+        if (setPage) {
+          setPage("List");
+        }
+      })
+      .catch((err) => console.error("Error adding question:", err));
   }
 
   return (
